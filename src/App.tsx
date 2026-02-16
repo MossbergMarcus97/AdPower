@@ -1,19 +1,15 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { ThemePicker } from './components/ThemePicker'
 import { VariantWorkspace } from './components/VariantWorkspace'
-import { themes } from './data'
+import { activeTheme } from './data'
 
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<ThemePicker />} />
-      {themes.map((theme) => (
-        <Route
-          key={theme.id}
-          path={`/${theme.route}`}
-          element={<VariantWorkspace theme={theme} />}
-        />
-      ))}
+      <Route path="/" element={<VariantWorkspace theme={activeTheme} />} />
+      <Route path="/swiss" element={<Navigate to="/" replace />} />
+      <Route path="/neon" element={<Navigate to="/" replace />} />
+      <Route path="/soft-tech" element={<Navigate to="/" replace />} />
+      <Route path="/dark-luxury" element={<Navigate to="/" replace />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

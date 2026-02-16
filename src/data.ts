@@ -21,49 +21,48 @@ export const themes: ThemeDefinition[] = [
       'International Typographic Style applied to high-volume ad generation workflows.',
     ctaLabel: 'Build With Precision',
   },
+]
+
+export const archivedThemes: ThemeDefinition[] = [
   {
     id: 'neon',
     route: 'neon',
     label: 'Neon Editorial',
-    tagline: 'High-contrast creative control with electric moments',
-    summary:
-      'Editorial type scale, neon AI indicators, and dark-canvas contrast for visual teams who want the product to perform and performatively stand out.',
+    tagline: 'Archived visual direction',
+    summary: 'Archived in favor of Swiss Precision.',
     mode: 'dark',
     className: 'theme-neon',
-    heroTitle: 'Electric Campaign Studio',
-    heroSubtitle:
-      'Contemporary editorial energy tuned for AI generation, comparison, and rapid creative iteration.',
-    ctaLabel: 'Unleash The AI',
+    heroTitle: 'Archived',
+    heroSubtitle: 'Archived',
+    ctaLabel: 'Archived',
   },
   {
     id: 'soft-tech',
     route: 'soft-tech',
     label: 'Soft Tech',
-    tagline: 'Approachable intelligence with calm productivity',
-    summary:
-      'Frosted surfaces, soft gradients, and friendly hierarchy designed to keep complex generation tasks light and understandable.',
+    tagline: 'Archived visual direction',
+    summary: 'Archived in favor of Swiss Precision.',
     mode: 'light',
     className: 'theme-soft-tech',
-    heroTitle: 'Calm Command Center',
-    heroSubtitle:
-      'Guided workflows, supportive AI suggestions, and clear controls for teams balancing speed with confidence.',
-    ctaLabel: 'Generate Smoothly',
+    heroTitle: 'Archived',
+    heroSubtitle: 'Archived',
+    ctaLabel: 'Archived',
   },
   {
     id: 'dark-luxury',
     route: 'dark-luxury',
     label: 'Dark Luxury',
-    tagline: 'Premium craft direction for high-end brand teams',
-    summary:
-      'Deep charcoal surfaces with copper accents and restrained motion. Built to feel like an exclusive creative atelier.',
+    tagline: 'Archived visual direction',
+    summary: 'Archived in favor of Swiss Precision.',
     mode: 'dark',
     className: 'theme-dark-luxury',
-    heroTitle: 'Atelier For Performance Ads',
-    heroSubtitle:
-      'Sophisticated production workflows where every campaign decision feels deliberate, refined, and expensive.',
-    ctaLabel: 'Compose Variants',
+    heroTitle: 'Archived',
+    heroSubtitle: 'Archived',
+    ctaLabel: 'Archived',
   },
 ]
+
+export const activeTheme = themes[0]
 
 export const statCards: StatCard[] = [
   {

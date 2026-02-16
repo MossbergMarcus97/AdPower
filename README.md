@@ -1,22 +1,13 @@
-# AdVariant Visual Prototype
+# AdVariant Swiss Precision Prototype
 
-AdVariant prototype implementing the master specification with four complete visual directions:
+AdVariant prototype focused on the Swiss Precision direction from the master specification.
 
-1. Swiss Precision
-2. Neon Editorial
-3. Soft Tech
-4. Dark Luxury
-
-Each direction runs the same product workflow with distinct typography, color systems, spacing, motion, and component styling so you can compare the experience directly.
+Other visual directions (Neon Editorial, Soft Tech, Dark Luxury) are archived and route back to Swiss.
 
 ## What is implemented
 
-- Variant chooser at `/`
-- Dedicated routes:
-  - `/swiss`
-  - `/neon`
-  - `/soft-tech`
-  - `/dark-luxury`
+- Swiss app at `/`
+- Legacy routes (`/swiss`, `/neon`, `/soft-tech`, `/dark-luxury`) redirect to `/`
 - Shared UX flows from spec:
   - Client → Campaign → Ad context
   - Dashboard metrics + active campaigns
@@ -29,6 +20,9 @@ Each direction runs the same product workflow with distinct typography, color sy
   - Time-aware greeting messages
   - Loading states
   - Friendly success/error messaging
+- Functional navbar and CTA interactions:
+  - Top nav buttons switch working views
+  - Dashboard/campaign/review action buttons update state and workflows
 
 ## Tech stack
 

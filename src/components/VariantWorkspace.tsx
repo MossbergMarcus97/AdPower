@@ -1,13 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import {
   baseReviewVariants,
   campaigns,
   generationModes,
   generationStages,
   statCards,
-  themes,
-  topNavLinks,
   wizardSteps,
 } from '../data'
 import {
@@ -32,6 +29,21 @@ const viewOptions: Array<{ id: AppView; label: string }> = [
 ]
 
 type GenerationStatus = 'idle' | 'running' | 'completed' | 'failed'
+
+type TopNavItem = {
+  id: string
+  label: string
+  view: AppView
+  step?: number
+}
+
+const topNavItems: TopNavItem[] = [
+  { id: 'clients', label: 'Clients', view: 'dashboard' },
+  { id: 'campaigns', label: 'Campaigns', view: 'campaign' },
+  { id: 'generate', label: 'Generate', view: 'generate' },
+  { id: 'review', label: 'Review', view: 'review' },
+  { id: 'assets', label: 'Assets', view: 'campaign', step: 5 },
+]
 
 function classNames(...names: Array<string | false | undefined>): string {
   return names.filter(Boolean).join(' ')
@@ -69,6 +81,7 @@ export function VariantWorkspace({ theme }: { theme: ThemeDefinition }) {
   const [secondsElapsed, setSecondsElapsed] = useState(0)
   const [loadingMessage, setLoadingMessage] = useState(getLoadingMessage(0))
   const [feedbackMessage, setFeedbackMessage] = useState('')
+  const [actionMessage, setActionMessage] = useState('Swiss Precision is now the active production direction.')
 
   const [reviewVariants, setReviewVariants] = useState<ReviewVariant[]>(
     baseReviewVariants,
@@ -91,6 +104,18 @@ export function VariantWorkspace({ theme }: { theme: ThemeDefinition }) {
   )
 
   const currentStep = wizardSteps[wizardStep]
+
+  useEffect(() => {
+    if (!actionMessage) {
+      return
+    }
+
+    const timeout = window.setTimeout(() => {
+      setActionMessage('')
+    }, 3200)
+
+    return () => window.clearTimeout(timeout)
+  }, [actionMessage])
 
   useEffect(() => {
     if (generationStatus !== 'running' || generationStartedAt === null) {
@@ -159,6 +184,7 @@ export function VariantWorkspace({ theme }: { theme: ThemeDefinition }) {
     setSecondsElapsed(0)
     setLoadingMessage(getLoadingMessage(0))
     setFeedbackMessage('')
+    setActionMessage('Generation queued. We are building a fresh Swiss-precision batch.')
   }
 
   function simulateFailure(): void {
@@ -168,6 +194,24 @@ export function VariantWorkspace({ theme }: { theme: ThemeDefinition }) {
 
   function retryGeneration(): void {
     startGeneration()
+  }
+
+  function openView(nextView: AppView, message?: string, step?: number): void {
+    setView(nextView)
+    if (typeof step === 'number') {
+      setWizardStep(step)
+    }
+    if (message) {
+      setActionMessage(message)
+    }
+  }
+
+  function navIsActive(item: TopNavItem): boolean {
+    if (item.id === 'assets') {
+      return view === 'campaign' && wizardStep === 5
+    }
+
+    return view === item.view
   }
 
   function toggleVariantSelection(variantId: string): void {
@@ -209,6 +253,22 @@ export function VariantWorkspace({ theme }: { theme: ThemeDefinition }) {
     setWizardStep((current) => Math.min(wizardSteps.length - 1, current + 1))
   }
 
+  function queueExportPackage(): void {
+    const selectedPlatforms = [
+      platformMeta ? 'Meta Ads' : null,
+      platformInstagram ? 'Instagram' : null,
+      platformGoogle ? 'Google Ads' : null,
+      platformLinkedIn ? 'LinkedIn' : null,
+    ].filter(Boolean)
+
+    const platformLabel =
+      selectedPlatforms.length > 0 ? selectedPlatforms.join(', ') : 'No platform selected'
+
+    setActionMessage(
+      `Export package queued: ${platformLabel} · ${exportFormat} · ${exportGrouping}.`,
+    )
+  }
+
   return (
     <div className={classNames('variant-shell', theme.className)}>
       <div className="ambient-layer" aria-hidden />
@@ -220,29 +280,41 @@ export function VariantWorkspace({ theme }: { theme: ThemeDefinition }) {
         </div>
 
         <nav className="top-links" aria-label="Primary">
-          {topNavLinks.map((item) => (
-            <button key={item} className="nav-pill" type="button">
-              {item}
+          {topNavItems.map((item) => (
+            <button
+              key={item.id}
+              className={classNames('nav-pill', navIsActive(item) && 'nav-pill-active')}
+              onClick={() =>
+                openView(
+                  item.view,
+                  item.id === 'assets'
+                    ? 'Asset setup loaded in Campaign step 6.'
+                    : `${item.label} view loaded.`,
+                  item.step,
+                )
+              }
+              type="button"
+            >
+              {item.label}
             </button>
           ))}
         </nav>
 
-        <div className="theme-links" aria-label="Switch visual direction">
-          {themes.map((candidate) => (
-            <Link
-              key={candidate.id}
-              className={classNames(
-                'theme-chip',
-                candidate.id === theme.id && 'theme-chip-active',
-              )}
-              to={`/${candidate.route}`}
-            >
-              {candidate.label}
-            </Link>
-          ))}
-          <Link className="theme-chip" to="/">
-            All Styles
-          </Link>
+        <div className="top-actions">
+          <button
+            className="btn btn-ghost"
+            onClick={() => openView('generate', 'Quick generation controls opened.')}
+            type="button"
+          >
+            Quick Generate
+          </button>
+          <button
+            className="btn btn-secondary"
+            onClick={() => openView('review', 'Review and export workspace opened.')}
+            type="button"
+          >
+            Export Center
+          </button>
         </div>
       </header>
 
@@ -257,7 +329,7 @@ export function VariantWorkspace({ theme }: { theme: ThemeDefinition }) {
                   'sidebar-link',
                   view === option.id && 'sidebar-link-active',
                 )}
-                onClick={() => setView(option.id)}
+                onClick={() => openView(option.id, `${option.label} workspace loaded.`)}
                 type="button"
               >
                 {option.label}
@@ -292,11 +364,20 @@ export function VariantWorkspace({ theme }: { theme: ThemeDefinition }) {
             <h1>{theme.heroTitle}</h1>
             <p className="hero-subtitle">{theme.heroSubtitle}</p>
             <p className="hero-greeting">{greeting}</p>
+            {actionMessage && (
+              <p className="action-message" role="status">
+                {actionMessage}
+              </p>
+            )}
             <div className="hero-actions">
               <button className="btn btn-primary" onClick={startGeneration} type="button">
                 {theme.ctaLabel}
               </button>
-              <button className="btn btn-secondary" onClick={() => setView('campaign')} type="button">
+              <button
+                className="btn btn-secondary"
+                onClick={() => openView('campaign', 'Campaign wizard opened.')}
+                type="button"
+              >
                 Create Campaign
               </button>
             </div>
@@ -307,7 +388,11 @@ export function VariantWorkspace({ theme }: { theme: ThemeDefinition }) {
               <section className="panel">
                 <div className="section-head">
                   <h2>Campaign Operations Dashboard</h2>
-                  <button className="btn btn-ghost" type="button">
+                  <button
+                    className="btn btn-ghost"
+                    onClick={() => openView('dashboard', 'Showing all active campaigns.')}
+                    type="button"
+                  >
                     View All Campaigns
                   </button>
                 </div>
@@ -325,7 +410,11 @@ export function VariantWorkspace({ theme }: { theme: ThemeDefinition }) {
               <section className="panel">
                 <div className="section-head">
                   <h2>Active Campaigns</h2>
-                  <button className="btn btn-ghost" type="button">
+                  <button
+                    className="btn btn-ghost"
+                    onClick={() => openView('campaign', 'New campaign setup initialized.')}
+                    type="button"
+                  >
                     + New Campaign
                   </button>
                 </div>
@@ -349,10 +438,16 @@ export function VariantWorkspace({ theme }: { theme: ThemeDefinition }) {
                         <p>{campaign.approved} approved</p>
                       </div>
                       <div className="card-actions">
-                        <button className="btn btn-ghost" type="button">
+                        <button className="btn btn-ghost" onClick={startGeneration} type="button">
                           Generate More
                         </button>
-                        <button className="btn btn-secondary" type="button">
+                        <button
+                          className="btn btn-secondary"
+                          onClick={() =>
+                            openView('review', `Export workspace opened for ${campaign.name}.`)
+                          }
+                          type="button"
+                        >
                           Export
                         </button>
                       </div>
@@ -368,7 +463,11 @@ export function VariantWorkspace({ theme }: { theme: ThemeDefinition }) {
               <section className="panel">
                 <div className="section-head">
                   <h2>Campaign Creation Wizard (Step {wizardStep + 1}/6)</h2>
-                  <button className="btn btn-ghost" type="button">
+                  <button
+                    className="btn btn-ghost"
+                    onClick={() => setActionMessage('Draft locked in. You can continue anytime.')}
+                    type="button"
+                  >
                     Save Draft
                   </button>
                 </div>
@@ -592,7 +691,7 @@ export function VariantWorkspace({ theme }: { theme: ThemeDefinition }) {
               <section className="panel">
                 <div className="section-head">
                   <h2>Export Configuration</h2>
-                  <button className="btn btn-primary" type="button">
+                  <button className="btn btn-primary" onClick={queueExportPackage} type="button">
                     Generate Export Package
                   </button>
                 </div>
