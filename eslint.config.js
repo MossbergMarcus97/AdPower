@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', 'worker/.wrangler']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -17,7 +17,21 @@ export default defineConfig([
     ],
     languageOptions: {
       ecmaVersion: 2020,
-      globals: globals.browser,
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+        ...globals.serviceworker,
+      },
+    },
+  },
+  {
+    files: ['**/*.test.{ts,tsx}', 'e2e/**/*.ts'],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+        ...globals.vitest,
+      },
     },
   },
 ])

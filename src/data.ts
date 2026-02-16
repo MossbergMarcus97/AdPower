@@ -1,68 +1,28 @@
 import type {
   CampaignCard,
+  GenerationModeOption,
+  GenerationStage,
   ReviewVariant,
   StatCard,
   ThemeDefinition,
+  TopNavItem,
   WizardStep,
 } from './types'
 
-export const themes: ThemeDefinition[] = [
-  {
-    id: 'swiss',
-    route: 'swiss',
-    label: 'Swiss Precision',
-    tagline: 'Grid-first minimalism for ruthless clarity',
-    summary:
-      'Square geometry, strict hierarchy, and functional accents. Built for teams that value signal over decoration.',
-    mode: 'light',
-    className: 'theme-swiss',
-    heroTitle: 'Systematic Creative Production',
-    heroSubtitle:
-      'International Typographic Style applied to high-volume ad generation workflows.',
-    ctaLabel: 'Build With Precision',
-  },
-]
-
-export const archivedThemes: ThemeDefinition[] = [
-  {
-    id: 'neon',
-    route: 'neon',
-    label: 'Neon Editorial',
-    tagline: 'Archived visual direction',
-    summary: 'Archived in favor of Swiss Precision.',
-    mode: 'dark',
-    className: 'theme-neon',
-    heroTitle: 'Archived',
-    heroSubtitle: 'Archived',
-    ctaLabel: 'Archived',
-  },
-  {
-    id: 'soft-tech',
-    route: 'soft-tech',
-    label: 'Soft Tech',
-    tagline: 'Archived visual direction',
-    summary: 'Archived in favor of Swiss Precision.',
-    mode: 'light',
-    className: 'theme-soft-tech',
-    heroTitle: 'Archived',
-    heroSubtitle: 'Archived',
-    ctaLabel: 'Archived',
-  },
-  {
-    id: 'dark-luxury',
-    route: 'dark-luxury',
-    label: 'Dark Luxury',
-    tagline: 'Archived visual direction',
-    summary: 'Archived in favor of Swiss Precision.',
-    mode: 'dark',
-    className: 'theme-dark-luxury',
-    heroTitle: 'Archived',
-    heroSubtitle: 'Archived',
-    ctaLabel: 'Archived',
-  },
-]
-
-export const activeTheme = themes[0]
+export const activeTheme: ThemeDefinition = {
+  id: 'swiss',
+  route: '',
+  label: 'Swiss Precision',
+  tagline: 'Grid-first minimalism for ruthless clarity',
+  summary:
+    'Square geometry, strict hierarchy, and functional accents. Built for teams that value signal over decoration.',
+  mode: 'light',
+  className: 'theme-swiss',
+  heroTitle: 'Systematic Creative Production',
+  heroSubtitle:
+    'International Typographic Style applied to high-volume ad generation workflows.',
+  ctaLabel: 'Build With Precision',
+}
 
 export const statCards: StatCard[] = [
   {
@@ -124,6 +84,8 @@ export const campaigns: CampaignCard[] = [
   },
 ]
 
+export const defaultCampaignId = campaigns[0].id
+
 export const wizardSteps: WizardStep[] = [
   {
     id: 'basic-info',
@@ -145,7 +107,8 @@ export const wizardSteps: WizardStep[] = [
       'Success metric: CPA below $38',
       'Optimization event: Completed checkout',
     ],
-    aiAssist: 'Recommendation: Conversion objective aligns with your historical best performers.',
+    aiAssist:
+      'Recommendation: Conversion objective aligns with your historical best performers.',
   },
   {
     id: 'platform-format',
@@ -193,7 +156,51 @@ export const wizardSteps: WizardStep[] = [
   },
 ]
 
-export const baseReviewVariants: ReviewVariant[] = [
+export const generationStages: GenerationStage[] = [
+  { id: 'queued', label: 'Queued' },
+  { id: 'prompt', label: 'Building prompt set' },
+  { id: 'image', label: 'Generating visuals' },
+  { id: 'copy', label: 'Writing copy variants' },
+  { id: 'score', label: 'Scoring brand consistency' },
+  { id: 'packaging', label: 'Packaging review set' },
+  { id: 'completed', label: 'Completed' },
+]
+
+export const generationModes: GenerationModeOption[] = [
+  {
+    id: 'quick',
+    label: 'Quick Generate',
+    description: '20-50 variants generated automatically from campaign context.',
+  },
+  {
+    id: 'custom',
+    label: 'Custom Generate',
+    description:
+      'Control headlines, visuals, CTAs, layouts, and color scheme tests.',
+  },
+  {
+    id: 'iterate',
+    label: 'Iterate Existing',
+    description: 'Produce subtle and radical variations from a winning ad base.',
+  },
+]
+
+export const topNavItems: TopNavItem[] = [
+  { id: 'clients', label: 'Clients', view: 'dashboard' },
+  { id: 'campaigns', label: 'Campaigns', view: 'campaign' },
+  { id: 'generate', label: 'Generate', view: 'generate' },
+  { id: 'review', label: 'Review', view: 'review' },
+  { id: 'assets', label: 'Assets', view: 'campaign', step: 6 },
+]
+
+export const viewOptions: Array<{ id: 'dashboard' | 'campaign' | 'generate' | 'review'; label: string }> = [
+  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'campaign', label: 'New Campaign' },
+  { id: 'generate', label: 'Generate Variants' },
+  { id: 'review', label: 'Review & Export' },
+]
+
+export const fallbackReviewVariants: ReviewVariant[] = [
   {
     id: 'var-001',
     title: 'Variant #001',
@@ -221,51 +228,4 @@ export const baseReviewVariants: ReviewVariant[] = [
     status: 'pending',
     aiGenerated: false,
   },
-  {
-    id: 'var-004',
-    title: 'Variant #004',
-    headline: 'Creative velocity for teams shipping every week.',
-    cta: 'Launch Campaign',
-    confidence: 4.1,
-    status: 'rejected',
-    aiGenerated: true,
-  },
-  {
-    id: 'var-005',
-    title: 'Variant #005',
-    headline: 'From source assets to platform exports, no workflow gaps.',
-    cta: 'Take It With You',
-    confidence: 4.7,
-    status: 'approved',
-    aiGenerated: false,
-  },
 ]
-
-export const generationStages = [
-  'Queued',
-  'Building prompt set',
-  'Generating visuals',
-  'Writing copy variants',
-  'Scoring brand consistency',
-  'Packaging review set',
-]
-
-export const generationModes = [
-  {
-    id: 'quick',
-    label: 'Quick Generate',
-    description: '20-50 variants generated automatically from campaign context.',
-  },
-  {
-    id: 'custom',
-    label: 'Custom Generate',
-    description: 'Control headlines, visuals, CTAs, layouts, and color scheme tests.',
-  },
-  {
-    id: 'iterate',
-    label: 'Iterate Existing',
-    description: 'Produce subtle and radical variations from a winning ad base.',
-  },
-] as const
-
-export const topNavLinks = ['Clients', 'Campaigns', 'Generate', 'Review', 'Assets']

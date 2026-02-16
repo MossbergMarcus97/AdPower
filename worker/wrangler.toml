@@ -1,0 +1,31 @@
+name = "adpower-api"
+main = "src/index.ts"
+compatibility_date = "2026-02-16"
+workers_dev = true
+
+[vars]
+SESSION_PASSPHRASE = "change-me"
+SESSION_SECRET = "change-me-secret"
+APP_ORIGIN = "https://adpower.pages.dev"
+MAX_VARIANTS_PER_JOB = "20"
+MAX_JOBS_PER_DAY = "20"
+OPENAI_MODEL = "gpt-4.1-mini"
+ANTHROPIC_MODEL = "claude-3-5-sonnet-latest"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "adpower"
+database_id = "acdefbd3-521f-4385-870c-737db2b6fcc0"
+
+[[r2_buckets]]
+binding = "ASSETS"
+bucket_name = "adpower-assets"
+
+[[queues.producers]]
+binding = "GEN_QUEUE"
+queue = "adpower-gen"
+
+[[queues.consumers]]
+queue = "adpower-gen"
+max_batch_size = 10
+max_batch_timeout = 3

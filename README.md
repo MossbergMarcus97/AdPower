@@ -1,78 +1,97 @@
-# AdVariant Swiss Precision Prototype
+# AdPower (Swiss Precision)
 
-AdVariant prototype focused on the Swiss Precision direction from the master specification.
+Production-baseline Swiss Precision frontend + Cloudflare Worker AI vertical slice.
 
-Other visual directions (Neon Editorial, Soft Tech, Dark Luxury) are archived and route back to Swiss.
+## What this now includes
 
-## What is implemented
+- Swiss-only UI direction (legacy theme routes redirect to `/`)
+- Refactored frontend architecture:
+  - `src/features/*` view modules
+  - `src/components/ui/*` primitives
+  - reducer-based workspace state (`src/lib/workspace/*`)
+- URL-synced navigation state (`view`, `step`)
+- LocalStorage persistence for non-sensitive preferences
+- Accessibility hardening:
+  - keyboard/focus-visible support
+  - `aria-current` top nav state
+  - `aria-live` status channel
+- Test baseline:
+  - reducer/selectors/microcopy unit tests
+  - component interaction tests
+  - Playwright smoke e2e flow
+- AI API vertical slice in Cloudflare Worker:
+  - passphrase session gate
+  - job queue pipeline
+  - dual-provider routing (primary + fallback)
+  - D1 + R2 persistence
+  - generation/review/export endpoints
 
-- Swiss app at `/`
-- Legacy routes (`/swiss`, `/neon`, `/soft-tech`, `/dark-luxury`) redirect to `/`
-- Shared UX flows from spec:
-  - Client → Campaign → Ad context
-  - Dashboard metrics + active campaigns
-  - 6-step campaign wizard with AI assist notes
-  - Generation modes (quick/custom/iterate)
-  - Generation job progress states and feedback
-  - Review grid with batch approval/rejection
-  - Export configuration by platform/format/grouping
-- Personality microcopy:
-  - Time-aware greeting messages
-  - Loading states
-  - Friendly success/error messaging
-- Functional navbar and CTA interactions:
-  - Top nav buttons switch working views
-  - Dashboard/campaign/review action buttons update state and workflows
-
-## Tech stack
-
-- React + TypeScript + Vite
-- React Router
-- CSS variable-based multi-theme architecture
-
-## Local development
+## Frontend scripts
 
 ```bash
 npm install
 npm run dev
-```
-
-## Production build
-
-```bash
+npm run lint
+npm run typecheck
+npm run test:run
 npm run build
-npm run preview
+npm run verify
 ```
 
-## Deploy to Cloudflare Pages
-
-Set your project name, then deploy:
+## Cloudflare Pages deploy
 
 ```bash
-export CLOUDFLARE_PROJECT_NAME="advariant-visual-prototype"
 npm run deploy:cloudflare
 ```
 
-Notes:
+This deploy script is pinned to Pages project `adpower`.
 
-- `public/_redirects` is included for SPA route handling on Pages.
-- Requires Cloudflare auth (`wrangler login`) on the machine.
+## Worker setup
 
-## Publish to GitHub
+Worker source: `worker/`
 
-Initialize and push:
+1. Create resources (D1, R2, Queue) in Cloudflare.
+2. Update `worker/wrangler.toml` bindings:
+   - `database_id`
+   - `bucket_name`
+   - queue name
+3. Set secure vars/secrets:
+   - `SESSION_PASSPHRASE`
+   - `SESSION_SECRET`
+   - `OPENAI_API_KEY`
+   - `ANTHROPIC_API_KEY`
+   - `GOOGLE_API_KEY`
+
+Apply D1 schema:
 
 ```bash
-git init
-git add .
-git commit -m "Build AdVariant multi-style prototype"
-gh repo create AdPower --public --source=. --remote=origin --push
+wrangler d1 execute adpower --file=worker/migrations/0001_init.sql --remote
 ```
 
-If you already have a remote:
+Run/deploy worker:
 
 ```bash
-git remote add origin <your-repo-url>
-git branch -M main
-git push -u origin main
+npm run worker:dev
+npm run worker:deploy
+```
+
+## API contracts implemented (`/v1`)
+
+- `POST /session`
+- `GET /session`
+- `POST /generation-jobs`
+- `GET /generation-jobs/:jobId`
+- `GET /campaigns/:campaignId/variants`
+- `PATCH /variants/:variantId/status`
+- `POST /exports`
+- `GET /exports/:exportId`
+- `GET /exports/:exportId/download`
+
+## Local integration
+
+Frontend API base defaults to `/v1`.
+To target a remote Worker domain locally:
+
+```bash
+VITE_API_BASE_URL="https://<your-worker-domain>/v1" npm run dev
 ```
