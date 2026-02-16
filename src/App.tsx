@@ -3,9 +3,10 @@ import { ThemePicker } from './components/ThemePicker'
 import { VariantWorkspace } from './components/VariantWorkspace'
 import { themes } from './data'
 
-function ThemeRoutes() {
+export default function App() {
   return (
-    <>
+    <Routes>
+      <Route path="/" element={<ThemePicker />} />
       {themes.map((theme) => (
         <Route
           key={theme.id}
@@ -13,15 +14,6 @@ function ThemeRoutes() {
           element={<VariantWorkspace theme={theme} />}
         />
       ))}
-    </>
-  )
-}
-
-export default function App() {
-  return (
-    <Routes>
-      <Route path="/" element={<ThemePicker />} />
-      <ThemeRoutes />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
