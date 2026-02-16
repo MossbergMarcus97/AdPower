@@ -9,6 +9,7 @@ import {
   finalizeExportRecord,
   getExportRecord,
   getGenerationJob,
+  getMetricsSummary,
   listVariants,
   listVariantsByIds,
   updateVariantStatus,
@@ -225,6 +226,15 @@ const generationJobSchema = z.object({
   visualVariations: z.number().int().min(1).max(50),
   messages: z.array(z.string()).default([]),
   platforms: z.array(z.string()).default([]),
+  testMode: z
+    .enum([
+      'none',
+      'force_copy_primary_failure',
+      'force_image_primary_failure',
+      'force_copy_fallback',
+      'force_image_fallback',
+    ])
+    .optional(),
 })
 
 app.post('/v1/generation-jobs', async (c) => {
@@ -233,6 +243,11 @@ app.post('/v1/generation-jobs', async (c) => {
 
   if (!parsed.success) {
     return c.json({ error: 'Invalid generation configuration' }, 400)
+  }
+
+  const testModeEnabled = c.env.ENABLE_PROVIDER_TEST_MODE === 'true'
+  if (parsed.data.testMode && parsed.data.testMode !== 'none' && !testModeEnabled) {
+    return c.json({ error: 'Provider test mode is disabled' }, 400)
   }
 
   const sessionId = c.get('sessionId')
@@ -308,6 +323,29 @@ app.get('/v1/generation-jobs/:jobId', async (c) => {
     startedAt: job.started_at,
     completedAt: job.completed_at,
   })
+})
+
+app.get('/v1/metrics/summary', async (c) => {
+  const windowHours = Math.max(
+    1,
+    Math.min(parseIntSafe(c.req.query('windowHours') ?? null, 24), 24 * 14),
+  )
+
+  try {
+    const summary = await getMetricsSummary(c.env.DB, windowHours)
+    return c.json(summary)
+  } catch (error) {
+    console.error(
+      JSON.stringify({
+        requestId: c.get('requestId'),
+        event: 'metrics_summary_failed',
+        error: toApiError(error, 'metrics_summary_failed'),
+        code: classifyError(error),
+      }),
+    )
+
+    return c.json({ error: 'Failed to load metrics summary' }, 500)
+  }
 })
 
 app.get('/v1/campaigns/:campaignId/variants', async (c) => {

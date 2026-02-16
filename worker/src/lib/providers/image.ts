@@ -160,10 +160,19 @@ export async function generateImageVariant(
   config: GenerationJobConfig,
   variantIndex: number,
 ): Promise<ImageResult> {
+  if (config.testMode === 'force_image_fallback') {
+    return fallbackSvg(buildPrompt(config, variantIndex))
+  }
+
+  const forcePrimaryFailure = config.testMode === 'force_image_primary_failure'
   const prompt = buildPrompt(config, variantIndex)
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
+      if (forcePrimaryFailure) {
+        throw new Error('provider_test_image_primary_failure')
+      }
+
       return await callOpenAI(env, prompt)
     } catch {
       // retry primary once before secondary

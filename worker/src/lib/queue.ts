@@ -29,6 +29,11 @@ function extensionFromContentType(contentType: string): string {
   return 'png'
 }
 
+function parseTimestamp(value: string): number {
+  const timestamp = Date.parse(value)
+  return Number.isFinite(timestamp) ? timestamp : Date.now()
+}
+
 function computeConfidence(params: {
   headline: string
   body: string
@@ -81,16 +86,20 @@ export async function processGenerationJob(
     1,
     Math.min(config.targetCount, parseMaxVariants(env)),
   )
+  const startedAtIso = nowIso()
+  const queueWaitMs = Math.max(0, Date.now() - parseTimestamp(job.created_at))
 
   await updateGenerationJob(env.DB, jobId, {
     status: 'running',
     progress: 5,
     stage: 'Building prompt context',
-    startedAt: nowIso(),
+    startedAt: startedAtIso,
   })
 
   let generatedCount = 0
   let failureCount = 0
+  let copyFallbackCount = 0
+  let imageFallbackCount = 0
 
   for (let index = 0; index < variantsTarget; index += 1) {
     const progress = Math.floor(((index + 1) / variantsTarget) * 90)
@@ -124,6 +133,14 @@ export async function processGenerationJob(
         providerImage: image.provider,
       })
 
+      if (copy.provider === 'fallback') {
+        copyFallbackCount += 1
+      }
+
+      if (image.provider === 'fallback') {
+        imageFallbackCount += 1
+      }
+
       await insertVariant(env.DB, {
         id: variantId,
         campaignId: job.campaign_id,
@@ -154,6 +171,12 @@ export async function processGenerationJob(
   }
 
   if (generatedCount === 0) {
+    const completedAtIso = nowIso()
+    const runDurationMs = Math.max(
+      0,
+      parseTimestamp(completedAtIso) - parseTimestamp(startedAtIso),
+    )
+
     await updateGenerationJob(env.DB, jobId, {
       status: 'failed',
       progress: 100,
@@ -162,10 +185,29 @@ export async function processGenerationJob(
         code: 'provider_timeout',
         message: 'All variants failed generation',
       }),
-      completedAt: nowIso(),
+      completedAt: completedAtIso,
     })
+
+    console.error(
+      JSON.stringify({
+        requestId,
+        jobId,
+        event: 'job_failed',
+        queueWaitMs,
+        runDurationMs,
+        generatedCount,
+        failureCount,
+        code: 'provider_timeout',
+      }),
+    )
     return
   }
+
+  const completedAtIso = nowIso()
+  const runDurationMs = Math.max(
+    0,
+    parseTimestamp(completedAtIso) - parseTimestamp(startedAtIso),
+  )
 
   await updateGenerationJob(env.DB, jobId, {
     status: 'completed',
@@ -179,7 +221,7 @@ export async function processGenerationJob(
             failureCount,
           })
         : null,
-    completedAt: nowIso(),
+    completedAt: completedAtIso,
   })
 
   console.info(
@@ -187,8 +229,14 @@ export async function processGenerationJob(
       requestId,
       jobId,
       event: 'job_completed',
+      queueWaitMs,
+      runDurationMs,
       generatedCount,
       failureCount,
+      copyFallbackCount,
+      imageFallbackCount,
+      copyFallbackRate: Number((copyFallbackCount / generatedCount).toFixed(4)),
+      imageFallbackRate: Number((imageFallbackCount / generatedCount).toFixed(4)),
     }),
   )
 }

@@ -66,6 +66,7 @@ Apply D1 schema:
 
 ```bash
 wrangler d1 execute adpower --file=worker/migrations/0001_init.sql --remote
+wrangler d1 execute adpower --file=worker/migrations/0002_metrics_indexes.sql --remote
 ```
 
 Run/deploy worker:
@@ -81,11 +82,34 @@ npm run worker:deploy
 - `GET /session`
 - `POST /generation-jobs`
 - `GET /generation-jobs/:jobId`
+- `GET /metrics/summary`
 - `GET /campaigns/:campaignId/variants`
 - `PATCH /variants/:variantId/status`
 - `POST /exports`
 - `GET /exports/:exportId`
 - `GET /exports/:exportId/download`
+
+## Capability + observability checks
+
+Run end-to-end capability validation (generate, review, export, failover scenarios):
+
+```bash
+PASSPHRASE="<your-passphrase>" npm run validate:capabilities
+```
+
+Run alert threshold check from Worker metrics:
+
+```bash
+PASSPHRASE="<your-passphrase>" npm run alerts:check
+```
+
+Useful overrides:
+- `API_BASE_URL`
+- `WINDOW_HOURS`
+- `ALERT_MIN_SUCCESS_RATE`
+- `ALERT_MAX_FAILURE_RATE`
+- `ALERT_MAX_COPY_FALLBACK_RATE`
+- `ALERT_MAX_IMAGE_FALLBACK_RATE`
 
 ## Local integration
 

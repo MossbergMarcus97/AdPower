@@ -9,6 +9,7 @@ export interface Env {
   APP_ORIGIN?: string
   MAX_VARIANTS_PER_JOB?: string
   MAX_JOBS_PER_DAY?: string
+  ENABLE_PROVIDER_TEST_MODE?: string
 
   OPENAI_API_KEY?: string
   OPENAI_MODEL?: string
@@ -22,6 +23,13 @@ export interface AppVariables {
   sessionId: string | null
 }
 
+export type GenerationTestMode =
+  | 'none'
+  | 'force_copy_primary_failure'
+  | 'force_image_primary_failure'
+  | 'force_copy_fallback'
+  | 'force_image_fallback'
+
 export interface GenerationJobConfig {
   targetCount: number
   headlineVariations: number
@@ -29,6 +37,7 @@ export interface GenerationJobConfig {
   messages: string[]
   platforms: string[]
   mode: 'quick' | 'custom' | 'iterate'
+  testMode?: GenerationTestMode
 }
 
 export interface QueueMessage {

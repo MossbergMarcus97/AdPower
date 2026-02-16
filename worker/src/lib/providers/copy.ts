@@ -163,10 +163,19 @@ export async function generateCopyVariant(
   config: GenerationJobConfig,
   variantIndex: number,
 ): Promise<CopyResult> {
+  if (config.testMode === 'force_copy_fallback') {
+    return buildFallback(config, variantIndex)
+  }
+
+  const forcePrimaryFailure = config.testMode === 'force_copy_primary_failure'
   const prompt = buildPrompt(config, variantIndex)
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
+      if (forcePrimaryFailure) {
+        throw new Error('provider_test_copy_primary_failure')
+      }
+
       return await callAnthropic(env, prompt)
     } catch {
       // retry primary once before fallback

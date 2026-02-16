@@ -40,6 +40,31 @@ export interface ExportRecord {
   completed_at: string | null
 }
 
+export interface MetricsSummary {
+  windowHours: number
+  generatedAt: string
+  jobs: {
+    total: number
+    queued: number
+    running: number
+    completed: number
+    failed: number
+    successRate: number
+    failureRate: number
+    avgQueueWaitMs: number | null
+    avgRunDurationMs: number | null
+    p95RunDurationMs: number | null
+  }
+  variants: {
+    total: number
+    copyFallbackRate: number
+    imageFallbackRate: number
+    copyProviderCounts: Record<string, number>
+    imageProviderCounts: Record<string, number>
+  }
+  errors: Record<string, number>
+}
+
 export function nowIso(): string {
   return new Date().toISOString()
 }
@@ -312,4 +337,217 @@ export async function listVariantsByIds(
     .all<VariantRecord>()
 
   return result.results ?? []
+}
+
+function toNumber(value: unknown, fallback = 0): number {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    if (Number.isFinite(parsed)) {
+      return parsed
+    }
+  }
+
+  return fallback
+}
+
+function normalizedRate(numerator: number, denominator: number): number {
+  if (denominator <= 0) {
+    return 0
+  }
+
+  return Number((numerator / denominator).toFixed(4))
+}
+
+function percentile(values: number[], ratio: number): number | null {
+  if (values.length === 0) {
+    return null
+  }
+
+  const ordered = [...values].sort((left, right) => left - right)
+  const index = Math.min(
+    ordered.length - 1,
+    Math.max(0, Math.ceil(ordered.length * ratio) - 1),
+  )
+  const selected = ordered[index]
+  return Number(selected.toFixed(2))
+}
+
+export async function getMetricsSummary(
+  db: D1Database,
+  windowHours: number,
+): Promise<MetricsSummary> {
+  const since = new Date(Date.now() - windowHours * 60 * 60 * 1000).toISOString()
+
+  const statusRows = await db
+    .prepare(
+      `SELECT status, COUNT(*) AS count
+       FROM generation_jobs
+       WHERE created_at >= ?1
+       GROUP BY status`,
+    )
+    .bind(since)
+    .all<{ status: string; count: number }>()
+
+  const counts = {
+    queued: 0,
+    running: 0,
+    completed: 0,
+    failed: 0,
+  }
+
+  for (const row of statusRows.results ?? []) {
+    if (row.status === 'queued') {
+      counts.queued = toNumber(row.count)
+    } else if (row.status === 'running') {
+      counts.running = toNumber(row.count)
+    } else if (row.status === 'completed') {
+      counts.completed = toNumber(row.count)
+    } else if (row.status === 'failed') {
+      counts.failed = toNumber(row.count)
+    }
+  }
+
+  const totalJobs =
+    counts.queued + counts.running + counts.completed + counts.failed
+
+  const timingRow = await db
+    .prepare(
+      `SELECT
+         AVG(
+           CASE
+             WHEN started_at IS NOT NULL
+             THEN (julianday(started_at) - julianday(created_at)) * 86400000.0
+           END
+         ) AS avg_queue_wait_ms,
+         AVG(
+           CASE
+             WHEN started_at IS NOT NULL AND completed_at IS NOT NULL
+             THEN (julianday(completed_at) - julianday(started_at)) * 86400000.0
+           END
+         ) AS avg_run_duration_ms
+       FROM generation_jobs
+       WHERE created_at >= ?1`,
+    )
+    .bind(since)
+    .first<{ avg_queue_wait_ms: number | null; avg_run_duration_ms: number | null }>()
+
+  const runRows = await db
+    .prepare(
+      `SELECT
+         (julianday(completed_at) - julianday(started_at)) * 86400000.0 AS run_duration_ms
+       FROM generation_jobs
+       WHERE created_at >= ?1
+         AND started_at IS NOT NULL
+         AND completed_at IS NOT NULL`,
+    )
+    .bind(since)
+    .all<{ run_duration_ms: number }>()
+
+  const runDurations = (runRows.results ?? [])
+    .map((row) => toNumber(row.run_duration_ms))
+    .filter((value) => value >= 0)
+
+  const variantTotals = await db
+    .prepare(
+      `SELECT
+         COUNT(*) AS total,
+         SUM(CASE WHEN provider_copy = 'fallback' THEN 1 ELSE 0 END) AS copy_fallback,
+         SUM(CASE WHEN provider_image = 'fallback' THEN 1 ELSE 0 END) AS image_fallback
+       FROM variants
+       WHERE created_at >= ?1`,
+    )
+    .bind(since)
+    .first<{ total: number; copy_fallback: number | null; image_fallback: number | null }>()
+
+  const copyProviderRows = await db
+    .prepare(
+      `SELECT provider_copy AS provider, COUNT(*) AS count
+       FROM variants
+       WHERE created_at >= ?1
+       GROUP BY provider_copy`,
+    )
+    .bind(since)
+    .all<{ provider: string | null; count: number }>()
+
+  const imageProviderRows = await db
+    .prepare(
+      `SELECT provider_image AS provider, COUNT(*) AS count
+       FROM variants
+       WHERE created_at >= ?1
+       GROUP BY provider_image`,
+    )
+    .bind(since)
+    .all<{ provider: string | null; count: number }>()
+
+  const copyProviderCounts: Record<string, number> = {}
+  for (const row of copyProviderRows.results ?? []) {
+    copyProviderCounts[row.provider ?? 'unknown'] = toNumber(row.count)
+  }
+
+  const imageProviderCounts: Record<string, number> = {}
+  for (const row of imageProviderRows.results ?? []) {
+    imageProviderCounts[row.provider ?? 'unknown'] = toNumber(row.count)
+  }
+
+  const errorRows = await db
+    .prepare(
+      `SELECT error_json
+       FROM generation_jobs
+       WHERE created_at >= ?1
+         AND error_json IS NOT NULL`,
+    )
+    .bind(since)
+    .all<{ error_json: string }>()
+
+  const errors: Record<string, number> = {}
+  for (const row of errorRows.results ?? []) {
+    let code = 'unknown_error'
+    try {
+      const parsed = JSON.parse(row.error_json) as { code?: string; message?: string }
+      code = parsed.code ?? (parsed.message ? 'message_error' : 'unknown_error')
+    } catch {
+      code = 'unparsed_error'
+    }
+
+    errors[code] = (errors[code] ?? 0) + 1
+  }
+
+  const totalVariants = toNumber(variantTotals?.total)
+  const copyFallbackCount = toNumber(variantTotals?.copy_fallback)
+  const imageFallbackCount = toNumber(variantTotals?.image_fallback)
+
+  return {
+    windowHours,
+    generatedAt: nowIso(),
+    jobs: {
+      total: totalJobs,
+      queued: counts.queued,
+      running: counts.running,
+      completed: counts.completed,
+      failed: counts.failed,
+      successRate: normalizedRate(counts.completed, totalJobs),
+      failureRate: normalizedRate(counts.failed, totalJobs),
+      avgQueueWaitMs:
+        timingRow && timingRow.avg_queue_wait_ms != null
+          ? Number(toNumber(timingRow.avg_queue_wait_ms).toFixed(2))
+          : null,
+      avgRunDurationMs:
+        timingRow && timingRow.avg_run_duration_ms != null
+          ? Number(toNumber(timingRow.avg_run_duration_ms).toFixed(2))
+          : null,
+      p95RunDurationMs: percentile(runDurations, 0.95),
+    },
+    variants: {
+      total: totalVariants,
+      copyFallbackRate: normalizedRate(copyFallbackCount, totalVariants),
+      imageFallbackRate: normalizedRate(imageFallbackCount, totalVariants),
+      copyProviderCounts,
+      imageProviderCounts,
+    },
+    errors,
+  }
 }

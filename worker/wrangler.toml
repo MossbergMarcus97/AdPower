@@ -9,6 +9,7 @@ SESSION_SECRET = "change-me-secret"
 APP_ORIGIN = "https://adpower.pages.dev"
 MAX_VARIANTS_PER_JOB = "20"
 MAX_JOBS_PER_DAY = "20"
+ENABLE_PROVIDER_TEST_MODE = "true"
 OPENAI_MODEL = "gpt-4.1-mini"
 ANTHROPIC_MODEL = "claude-3-5-sonnet-latest"
 
